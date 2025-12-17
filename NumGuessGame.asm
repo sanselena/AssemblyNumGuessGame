@@ -18,9 +18,9 @@ DATA SEGMENT                  ; START of the "Data File Cabinet" section.
     
     ; -------------------------------------------------------------------------
     ; THE SECRET NUMBER
-    ; We store '7' as text (ASCII) so we can compare it directly to the key press.
+    ; We store a random number as text (ASCII) so we can compare it directly to the key press.
     ; -------------------------------------------------------------------------
-    secret_num  DB '7'
+    secret_num  DB ?
 
 DATA ENDS                     ; END of the Data Segment.
 
@@ -34,7 +34,9 @@ START:
     ; We cannot move numbers directly into DS (short arms), so we use AX as a bridge.
     ; -------------------------------------------------------------------------
     MOV AX, DATA              ; Copy address of DATA segment to AX tray.
-    MOV DS, AX                ; Copy AX to DS (Now the CPU can find variables).
+    MOV DS, AX                ; Copy AX to DS (Now the CPU can find variables). 
+    
+    CALL GENERATE_RANDOM
 
     ; -------------------------------------------------------------------------
     ; 2. PRINT INTRO MESSAGE
@@ -62,7 +64,7 @@ GAME_LOOP:
     ; 5. THE LOGIC (The Comparison)
     ; CMP subtracts (AL - secret_num) to set the Flags (Lightbulbs).
     ; -------------------------------------------------------------------------
-    CMP AL, secret_num        ; Compare User Input (AL) vs Secret ('7').
+    CMP AL, secret_num        ; Compare User Input (AL) vs Secret.
     
     JE WINNER                 ; Jump if Equal (Zero Flag is ON).
     JL IS_LOW                 ; Jump if Less (Sign Flag is ON).
@@ -84,6 +86,24 @@ WINNER:
     LEA DX, msg_win           ; Point to "You Won" message.
     MOV AH, 09h
     INT 21h
+    
+GENERATE_RANDOM PROC
+    
+    MOV AH, 00h               ; BIOS: Get system time
+    INT 1Ah                   ; CX:DX = ticks since midnight
+
+    MOV AL, DL                ; Use fast-changing byte
+    XOR AH, AH
+
+    MOV BL, 10
+    DIV BL                    ; AH = remainder (0-9)
+
+    ADD AH, '0'               ; Convert to ASCII
+    MOV secret_num, AH
+
+    RET  
+    
+GENERATE_RANDOM ENDP
 
     ; -------------------------------------------------------------------------
     ; 6. EXIT PROGRAM
